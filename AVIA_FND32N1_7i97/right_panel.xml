@@ -1,0 +1,12 @@
+<pyvcp>
+    <scale>
+        <font>("Helvetica",16)</font>
+        <width>"25"</width>
+        <halpin>"my-hscale"</halpin>
+        <resolution>0.1</resolution>
+        <orient>HORIZONTAL</orient>
+        <initval>0</initval>
+        <min_>-5</min_>
+        <max_>5</max_>
+    </scale>
+</pyvcp>

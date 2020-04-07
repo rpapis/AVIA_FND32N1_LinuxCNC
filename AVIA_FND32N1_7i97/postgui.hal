@@ -1,0 +1,25 @@
+# Place any HAL commands in this file that you want to run AFTER the GUI finishes loading.
+# GUI HAL pins are not visible until after the GUI loads.
+# This file will not be written over by the configuration tool.
+net my-output pyvcp.my-hscale-f => hm2_[HOSTMOT2](BOARD).0.pwmgen.05.value
+
+net 84-in-0 hm2_7i97.0.7i84.0.0.input-00 => pyvcp.84-in-0
+net 84-in-1 hm2_7i97.0.7i84.0.0.input-01 => pyvcp.84-in-1
+net 84-in-2 hm2_7i97.0.7i84.0.0.input-02 => pyvcp.84-in-2
+net 84-in-3 hm2_7i97.0.7i84.0.0.input-03 => pyvcp.84-in-3
+net 84-in-4 hm2_7i97.0.7i84.0.0.input-04 => pyvcp.84-in-4
+
+net 84-out-0 pyvcp.84-out0  => hm2_7i97.0.7i84.0.0.output-00
+net 84-out-1 pyvcp.84-out1  => hm2_7i97.0.7i84.0.0.output-01
+net 84-out-2 pyvcp.84-out2  => hm2_7i97.0.7i84.0.0.output-02
+net 84-out-3 pyvcp.84-out3  => hm2_7i97.0.7i84.0.0.output-03
+net 84-out-4 pyvcp.84-out4  => hm2_7i97.0.7i84.0.0.output-04
+net 84-out-5 pyvcp.84-out5  => hm2_7i97.0.7i84.0.0.output-05
+
+#net ssr-0 pyvcp.ssr0  => hm2_7i97.0.ssr.00.out-00
+net ssr-1 pyvcp.ssr1  => hm2_7i97.0.ssr.00.out-01
+net ssr-2 pyvcp.ssr2  => hm2_7i97.0.ssr.00.out-02
+net ssr-3 pyvcp.ssr3  => hm2_7i97.0.ssr.00.out-03
+net ssr-4 pyvcp.ssr4  => hm2_7i97.0.ssr.00.out-04
+net ssr-5 pyvcp.ssr5  => hm2_7i97.0.ssr.00.out-05
+

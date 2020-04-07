@@ -1,0 +1,239 @@
+#setp gladevcp.status 1
+
+net motor.00.command => gladevcp.hal_pwm_val_x gladevcp.hal_bar_pwm_x
+net motor.01.command => gladevcp.hal_pwm_val_y gladevcp.hal_bar_pwm_y
+net motor.02.command => gladevcp.hal_pwm_val_z gladevcp.hal_bar_pwm_z
+
+net x_pid_error pid.0.error => gladevcp.hal_pid_val_x
+net y_pid_error pid.1.error => gladevcp.hal_pid_val_y
+net z_pid_error pid.2.error => gladevcp.hal_pid_val_z
+
+#PIDS
+# outputs
+net emcmot.00.enable => gladevcp.hal_led1
+net spindle-CW => gladevcp.hal_led2
+net spindle-CCW => gladevcp.hal_led3
+net flood-output => gladevcp.hal_led4
+net spindle-brake-enable => gladevcp.hal_led5
+net estop-loop => gladevcp.hal_led6
+
+# inputs
+net motion-ready-input => gladevcp.hal_led_in1
+net spindle-CW-input => gladevcp.hal_led_in2
+net spindle-CCW-input => gladevcp.hal_led_in3
+net K3-input => gladevcp.hal_led_in4
+net spindle-break-input => gladevcp.hal_led_in5
+net home-x-input => gladevcp.hal_led_in6
+net home-y-input => gladevcp.hal_led_in7
+net home-z-input => gladevcp.hal_led_in8
+net in7-input  => gladevcp.hal_led_in9
+net in8-input => gladevcp.hal_led_in10
+net servo-ready-input => gladevcp.hal_led_in11
+net motion-ready2-input => gladevcp.hal_led_in12
+
+#probe
+net probe-connected-input  => gladevcp.hal_led_probe_connected
+net probe-trig-input => gladevcp.hal_led_probe_trig
+net probe_trig-input-neg => gladevcp.hal_led_probe_trig_neg
+
+
+
+#status leds on buttons
+net program-is-running halui.program.is-running => hm2_7i97.0.7i84.0.0.output-00
+net program-is-paused halui.program.is-paused => hm2_7i97.0.7i84.0.0.output-01
+net program-is-idle halui.program.is-idle => hm2_7i97.0.7i84.0.0.output-02
+
+# Start/Stop/Resume/Pause automatics
+loadrt debounce cfg=3
+addf debounce.0 servo-thread
+
+setp debounce.0.delay 10
+
+net start-button-deb <= debounce.0.0.out
+net pause-button-deb <= debounce.0.1.out
+net coolant-button <= debounce.0.2.out
+
+net start-button-in hm2_7i97.0.7i84.0.0.input-00 => debounce.0.0.in
+net pause-button-in hm2_7i97.0.7i84.0.0.input-01 => debounce.0.1.in
+net coolant-button-in hm2_7i97.0.7i84.0.0.input-03 => debounce.0.2.in
+net program-stop	hm2_7i97.0.7i84.0.0.input-02
+
+ 	
+loadrt oneshot names=brake-oneshot
+loadrt and2 names=and2-0,and2-1,and2-2,and2-3,and2-4,and2-5,and2-6,and2-7,and2-8
+loadrt or2 names=or2-start-pause,or2-stop-pedant,or2-start-pedant,or2-pause-pedant,or2-paused-running
+loadrt not count=3
+loadrt timedelay names=is-paused-delay,flood-is-on-delay,brake-delay,spindle-on-delay
+
+addf is-paused-delay servo-thread
+addf flood-is-on-delay servo-thread
+addf brake-delay servo-thread
+addf spindle-on-delay servo-thread
+
+addf brake-oneshot servo-thread
+addf and2-0 servo-thread
+addf and2-1 servo-thread
+addf and2-2 servo-thread
+addf and2-3 servo-thread
+addf and2-4 servo-thread
+addf and2-5 servo-thread
+addf and2-6 servo-thread
+addf and2-7 servo-thread
+addf and2-8 servo-thread
+addf or2-start-pause servo-thread
+addf or2-stop-pedant servo-thread
+addf or2-start-pedant servo-thread
+addf or2-pause-pedant servo-thread
+addf or2-paused-running servo-thread
+addf not.0 servo-thread
+addf not.1 servo-thread
+addf not.2 servo-thread
+
+setp is-paused-delay.on-delay 0.5
+setp is-paused-delay.off-delay 0.5
+
+setp flood-is-on-delay.on-delay 0.5
+setp flood-is-on-delay.off-delay 0.5
+
+setp brake-delay.on-delay 0.5
+setp brake-delay.off-delay 0.1
+
+setp spindle-on-delay.on-delay 0.5
+setp spindle-on-delay.off-delay 0.1
+
+net brake-oneshot-time brake-oneshot.width 
+sets brake-oneshot-time  2.0 # brake time in seconds
+
+#delay program-is-paused signal for proper resume-pause work
+net program-is-paused => is-paused-delay.in
+net program-is-paused-deleyed <= is-paused-delay.out
+#delay flood-is-on-delay
+net flood-is-on halui.flood.is-on => flood-is-on-delay.in
+net flood-is-on-deleyed <= flood-is-on-delay.out
+
+# halui.program.is-paused negation
+net program-is-paused-deleyed => not.0.in
+net is-paused-neg <= not.0.out
+# flood-is-on-deleyed negation
+net flood-is-on-deleyed => not.1.in
+net flood-is-on-deleyed-neg <= not.1.out
+
+#pedant start pause logic
+net pdnt.button.start-pause => and2-7.in0
+net program-is-idle => and2-7.in1
+net start-pedant <= and2-7.out
+
+net program-is-running => or2-paused-running.in0
+net program-is-paused-deleyed => or2-paused-running.in1
+net resume-pedant <= or2-paused-running.out
+
+net pdnt.button.start-pause => and2-8.in0
+net resume-pedant => and2-8.in1
+net pause-pedant <= and2-8.out
+
+#Run 
+#pedant or for start
+net start-button-deb => or2-start-pedant.in0
+net start-pedant => or2-start-pedant.in1
+net start-button <= or2-start-pedant.out
+#pedant or for pause
+net pause-button-deb => or2-pause-pedant.in0
+net pause-pedant => or2-pause-pedant.in1
+net pause-button <= or2-pause-pedant.out
+
+net start-button => and2-0.in0
+net program-is-idle => and2-0.in1
+net program-run-req and2-0.out => halui.program.run
+
+#Pause /resume
+net program-is-idle => not.2.in
+net program-is-idle-neg <= not.2.out
+
+net program-is-idle-neg => and2-5.in0
+net pause-button => and2-5.in1
+net pause-button-active => and2-5.out
+
+net pause-button-active => and2-1.in0
+net is-paused-neg => and2-1.in1
+net program-pause-req and2-1.out => halui.program.pause
+
+net pause-button-active => or2-start-pause.in0
+net start-button => or2-start-pause.in1
+net program-resume-request <= or2-start-pause.out
+
+net program-is-paused-deleyed => and2-2.in0
+net program-resume-request => and2-2.in1
+net program-resume-req and2-2.out => halui.program.resume
+
+
+
+#program stop
+net program-stop => or2-stop-pedant.in0
+net pdnt.button.stop => or2-stop-pedant.in1
+net program-stop-req halui.program.stop <= or2-stop-pedant.out
+
+
+#Flood on/off
+net flood-on-reqest and2-3.out => halui.flood.on
+net flood-is-on-deleyed-neg => and2-3.in0
+net coolant-button => and2-3.in1
+
+net flood-on-req and2-4.out => halui.flood.off
+net flood-is-on-deleyed => and2-4.in0
+net coolant-button => and2-4.in1
+
+net flood-is-on => hm2_7i97.0.7i84.0.0.output-03
+
+
+#spindle controll
+
+# Brake
+# 1 - wait 0.5 s after spindle off
+# 2 - turn on brake
+# 3 - wait 2 s to brake
+# 4 - turn off brake
+#net spindle-CW spindle.0.forward
+#net spindle-CCW spindle.0.reverse
+net brake-on-off-switch <= gladevcp.hal_brake_on
+#net spindle-CW-in spindle.0.forward
+#net spindle-CCW-in spindle.0.reverse
+net spindle-brake-in spindle.0.brake
+net spindle-on-in spindle.0.on
+net spindle-at-speed spindle.0.at-speed
+
+# 1- delay of spindle brake turn on
+net spindle-brake-in => brake-delay.in
+net spindle-brake-deleyed <= brake-delay.out
+
+# turn on brake for some time
+net spindle-brake-deleyed => brake-oneshot.in
+net spindle-brake-triger <= brake-oneshot.out
+ 
+# check if brake should be on
+net brake-on-off-switch => and2-6.in0
+net spindle-brake-triger => and2-6.in1
+net spindle-brake-enable  <= and2-6.out
+
+#delay on at-speed signal
+net spindle-on-in => spindle-on-delay.in
+net spindle-at-speed <= spindle-on-delay.out
+
+
+# sonda ---------------------------------------------------
+# The next two lines are only needed if the pins had been connected before
+#comented becouse placing this in postgui halfile it dosconected tool change from probe screen
+#unlinkp iocontrol.0.tool-change
+#unlinkp iocontrol.0.tool-changed
+
+# link to auto tool measurement toolchange, so you get the advantage of tool description on change dialog
+
+# this settings were moved to probe_screen.hal:
+#net tool-change            probe.toolchange-change    <=   iocontrol.0.tool-change 
+#net tool-changed           probe.toolchange-changed   <=   iocontrol.0.tool-changed
+#net tool-prep-number       probe.toolchange-number    <=   iocontrol.0.tool-prep-number
+
+net tool-prep-loop         iocontrol.0.tool-prepare      <=   iocontrol.0.tool-prepared
+ 
+
+
+
